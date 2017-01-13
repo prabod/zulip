@@ -12,17 +12,18 @@ from django.shortcuts import redirect
 from django.views.decorators.csrf import csrf_exempt
 from django.utils.translation import ugettext as _
 from django.core import signing
-from typing import Text
 from six.moves import urllib
 from typing import Any, Dict, Optional, Tuple, Text
 
 from confirmation.models import Confirmation
-from zerver.forms import HomepageForm, OurAuthenticationForm, WRONG_SUBDOMAIN_ERROR
+from zerver.forms import HomepageForm, OurAuthenticationForm, \
+    WRONG_SUBDOMAIN_ERROR
+
 from zerver.lib.request import REQ, has_request_variables, JsonableError
 from zerver.lib.response import json_success, json_error
 from zerver.lib.utils import get_subdomain
 from zerver.models import PreregistrationUser, UserProfile, remote_user_to_email, Realm
-from zerver.views import create_preregistration_user, get_realm_from_request, \
+from zerver.views.registration import create_preregistration_user, get_realm_from_request, \
     redirect_and_log_into_subdomain
 from zproject.backends import password_auth_enabled, dev_auth_enabled, google_auth_enabled
 from zproject.jinja2 import render_to_response

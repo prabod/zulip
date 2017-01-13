@@ -56,7 +56,7 @@ import time
 import ujson
 import unittest
 from six.moves import urllib
-from six import text_type, binary_type
+from six import binary_type
 from zerver.lib.str_utils import NonBinaryStr
 
 from contextlib import contextmanager
@@ -188,17 +188,15 @@ class ZulipTestCase(TestCase):
         else:
             self.assertFalse(self.client.login(username=email, password=password))
 
-    def register(self, username, password, domain="zulip.com"):
-        # type: (Text, Text, Text) -> HttpResponse
-        self.client_post('/accounts/home/',
-                         {'email': username + "@" + domain})
-        return self.submit_reg_form_for_user(username, password, domain=domain)
+    def register(self, email, password):
+        # type: (Text, Text) -> HttpResponse
+        self.client_post('/accounts/home/', {'email': email})
+        return self.submit_reg_form_for_user(email, password)
 
-    def submit_reg_form_for_user(self, username, password, domain="zulip.com",
-                                 realm_name="Zulip Test", realm_subdomain="zuliptest",
-                                 realm_org_type=Realm.COMMUNITY,
+    def submit_reg_form_for_user(self, email, password, realm_name="Zulip Test",
+                                 realm_subdomain="zuliptest", realm_org_type=Realm.COMMUNITY,
                                  from_confirmation='', **kwargs):
-        # type: (Text, Text, Text, Optional[Text], Optional[Text], int, Optional[Text], **Any) -> HttpResponse
+        # type: (Text, Text, Optional[Text], Optional[Text], int, Optional[Text], **Any) -> HttpResponse
         """
         Stage two of the two-step registration process.
 
@@ -208,10 +206,10 @@ class ZulipTestCase(TestCase):
         You can pass the HTTP_HOST variable for subdomains via kwargs.
         """
         return self.client_post('/accounts/register/',
-                                {'full_name': username, 'password': password,
+                                {'full_name': email, 'password': password,
                                  'realm_name': realm_name,
                                  'realm_subdomain': realm_subdomain,
-                                 'key': find_key_by_email(username + '@' + domain),
+                                 'key': find_key_by_email(email),
                                  'realm_org_type': realm_org_type,
                                  'terms': True,
                                  'from_confirmation': from_confirmation},
@@ -250,7 +248,7 @@ class ZulipTestCase(TestCase):
             user_profile=user_profile,
             active=True,
             recipient__type=Recipient.STREAM)
-        return [cast(text_type, get_display_recipient(sub.recipient)) for sub in subs]
+        return [cast(Text, get_display_recipient(sub.recipient)) for sub in subs]
 
     def send_message(self, sender_name, raw_recipients, message_type,
                      content=u"test content", subject=u"test", **kwargs):

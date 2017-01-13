@@ -29,7 +29,7 @@ PULL_REQUEST_SUPPORTED_ACTIONS = [
     'created',
     'updated',
     'rejected',
-    'merged',
+    'fulfilled',
     'comment_created',
     'comment_updated',
     'comment_deleted',
@@ -129,7 +129,7 @@ def get_type(request, payload):
             action = action.group('action')
             if action in PULL_REQUEST_SUPPORTED_ACTIONS:
                 return pull_request_template.format(action)
-    raise UnknownTriggerType()
+    raise UnknownTriggerType("We don't support {} event type".format(event_key))
 
 def get_body_based_on_type(type):
     # type: (str) -> Any
@@ -356,7 +356,7 @@ GET_SINGLE_MESSAGE_BODY_DEPENDING_ON_TYPE_MAPPER = {
     'pull_request_updated': partial(get_pull_request_created_or_updated_body, action='updated'),
     'pull_request_approved': partial(get_pull_request_action_body, action='approved'),
     'pull_request_unapproved': partial(get_pull_request_action_body, action='unapproved'),
-    'pull_request_merged': partial(get_pull_request_action_body, action='merged'),
+    'pull_request_fulfilled': partial(get_pull_request_action_body, action='merged'),
     'pull_request_rejected': partial(get_pull_request_action_body, action='rejected'),
     'pull_request_comment_created': get_pull_request_comment_created_action_body,
     'pull_request_comment_updated': partial(get_pull_request_deleted_or_updated_comment_action_body, action='updated'),

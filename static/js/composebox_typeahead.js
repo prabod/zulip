@@ -67,7 +67,10 @@ function query_matches_person(query, person) {
 }
 
 function query_matches_stream(query, stream) {
-    return ( stream.toLowerCase().indexOf(query.toLowerCase()) !== -1);
+    query = query.toLowerCase();
+
+    return ( stream.name       .toLowerCase().indexOf(query) !== -1
+         ||  stream.description.toLowerCase().indexOf(query) !== -1);
 }
 
 // Case-insensitive
@@ -135,14 +138,21 @@ function handle_keydown(e) {
             }
 
             // Send the message on Ctrl/Cmd-Enter or if the user has configured enter to
-            // send and the shift key is not pressed.
-            if (e.target.id === "new_message_content" && code === 13 &&
-                (e.metaKey || e.ctrlKey || (page_params.enter_sends && !e.shiftKey))
-               ) {
+            // send and the Shift/Ctrl/Cmd/Alt keys are not pressed.
+            // Otherwise, make sure to insert a newline instead
+            if (e.target.id === "new_message_content" && code === 13) {
                 e.preventDefault();
-                if ($("#compose-send-button").attr('disabled') !== "disabled") {
-                    $("#compose-send-button").attr('disabled', 'disabled');
-                    compose.finish();
+
+                if ((!page_params.enter_sends && (e.metaKey || e.ctrlKey)) ||
+                    (page_params.enter_sends && !(e.shiftKey || e.ctrlKey || e.metaKey || e.altKey))
+                ) {
+                    if ($("#compose-send-button").attr('disabled') !== "disabled") {
+                        $("#compose-send-button").attr('disabled', 'disabled');
+                        compose.finish();
+                    }
+                } else {
+                    $("#new_message_content").caret('\n');
+                    compose.autosize_textarea();
                 }
             }
         }
@@ -241,12 +251,12 @@ exports.compose_content_begins_typeahead = function (query) {
             // Always sort above, under the assumption that names will
             // be longer and only contain "all" as a substring.
             pm_recipient_count: Infinity,
-            full_name: "all"
+            full_name: "all",
         };
         var everyone_item = {
             special_item_text: "everyone (Notify everyone)",
             email: "everyone",
-            full_name: "everyone"
+            full_name: "everyone",
         };
         var persons = people.get_realm_persons();
         return [].concat(persons, [all_item, everyone_item]);
@@ -264,7 +274,7 @@ exports.compose_content_begins_typeahead = function (query) {
 
         this.completing = 'stream';
         this.token = current_token.substring(current_token.indexOf("#")+1);
-        return stream_data.subscribed_streams();
+        return stream_data.subscribed_subs();
     }
     return false;
 };
@@ -276,7 +286,7 @@ exports.content_highlighter = function (item) {
         var item_formatted = typeahead_helper.render_person(item);
         return typeahead_helper.highlight_with_escaping(this.token, item_formatted);
     } else if (this.completing === 'stream') {
-        return typeahead_helper.highlight_with_escaping(this.token, item);
+        return typeahead_helper.render_stream(this.token, item);
     }
 };
 
@@ -298,7 +308,7 @@ exports.content_typeahead_selected = function (item) {
         $(document).trigger('usermention_completed.zulip', {mentioned: item});
     } else if (this.completing === 'stream') {
         beginning = (beginning.substring(0, beginning.length - this.token.length-1)
-                + '#**' + item + '** ');
+                + '#**' + item.name + '** ');
         $(document).trigger('streamname_completed.zulip', {stream: item});
     }
 
@@ -339,7 +349,7 @@ exports.initialize_compose_typeahead = function (selector, completions) {
         },
         updater: exports.content_typeahead_selected,
         stopAdvance: true, // Do not advance to the next field on a tab or enter
-        completions: completions
+        completions: completions,
     });
 };
 
@@ -368,7 +378,7 @@ exports.initialize = function () {
         return channel.post({
             url: '/json/users/me/enter-sends',
             idempotent: true,
-            data: {enter_sends: page_params.enter_sends}
+            data: {enter_sends: page_params.enter_sends},
         });
     });
     $("#enter_sends").prop('checked', page_params.enter_sends);
@@ -392,7 +402,7 @@ exports.initialize = function () {
             // because we want to avoid mixing up streams.
             var q = this.query.trim().toLowerCase();
             return (item.toLowerCase().indexOf(q) === 0);
-        }
+        },
     });
 
     $( "#subject" ).typeahead({
@@ -409,7 +419,7 @@ exports.initialize = function () {
                 sorted.unshift(this.query);
             }
             return sorted;
-        }
+        },
     });
 
     $( "#private_message_recipient" ).typeahead({
@@ -429,6 +439,10 @@ exports.initialize = function () {
             if (! current_recipient.match(/\S/)) {
                 return false;
             }
+            var recipients = util.extract_pm_recipients(this.query);
+            if (recipients.indexOf(item.email) > -1) {
+                return false;
+            }
 
             return query_matches_person(current_recipient, item);
         },
@@ -445,7 +459,7 @@ exports.initialize = function () {
             }
             return previous_recipients + item.email + ", ";
         },
-        stopAdvance: true // Do not advance to the next field on a tab or enter
+        stopAdvance: true, // Do not advance to the next field on a tab or enter
     });
 
     exports.initialize_compose_typeahead("#new_message_content", {mention: true, emoji: true, stream: true});

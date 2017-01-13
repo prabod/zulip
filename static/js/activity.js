@@ -26,7 +26,7 @@ function is_mobile(device) {
 
 var presence_descriptions = {
     active: 'is active',
-    idle:   'is not active'
+    idle:   'is not active',
 };
 
 /* Keep in sync with views.py:update_active_status_backend() */
@@ -299,7 +299,7 @@ exports.update_users = function (user_list) {
             num_unread: get_num_unread(user_id),
             type: presence,
             type_desc: presence_descriptions[presence],
-            mobile: exports.presence_info[user_id].mobile
+            mobile: exports.presence_info[user_id].mobile,
         };
     }
 
@@ -330,11 +330,11 @@ function actually_update_users_for_search() {
 var update_users_for_search = _.throttle(actually_update_users_for_search, 50);
 
 function show_huddles() {
-    $('#group-pm-list').expectOne().show();
+    $('#group-pm-list').addClass("show");
 }
 
 function hide_huddles() {
-    $('#group-pm-list').expectOne().hide();
+    $('#group-pm-list').removeClass("show");
 }
 
 exports.update_huddles = function () {
@@ -354,7 +354,7 @@ exports.update_huddles = function () {
             user_ids_string: huddle,
             name: exports.full_huddle_name(huddle),
             fraction_present: exports.huddle_fraction_present(huddle, exports.presence_info),
-            short_name: exports.short_huddle_name(huddle)
+            short_name: exports.short_huddle_name(huddle),
         };
     });
 
@@ -440,7 +440,7 @@ function focus_ping() {
             });
             exports.update_users();
             exports.update_huddles();
-        }
+        },
     });
 }
 
@@ -493,6 +493,11 @@ exports.set_user_statuses = function (users, server_time) {
     });
 
     exports.update_users(updated_users);
+    exports.update_huddles();
+};
+
+exports.redraw = function () {
+    exports.update_users();
     exports.update_huddles();
 };
 

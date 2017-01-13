@@ -1,18 +1,25 @@
-# Rename a Stream
+# Rename a stream
 
-**Note:** This feature is only available to administrators.
+If you are an administrator of a Zulip organization, you can rename existing
+streams by following the following steps.
 
-If you would like to change the name of an existing stream, locate the cog (![cog](/static/images/help/cog.png)) next to **Streams** in your left sidebar. A tooltip labeled **Subscribe, add, or configure streams** will appear.
+{!subscriptions.md!}
+{!filter-streams.md!}
 
-![Streams Cog](/static/images/help/streams-1.png)
+    !!! tip ""
+    {!all-streams.md!}
 
-After clicking the cog, a modal with an overview of all existing streams will pop up.
+3. After selecting a stream, {!stream-settings.md!}
 
-![Streams Overview](/static/images/help/streams-overview.png)
+{!stream-settings-scroll.md!} **Administrator settings** section. This section
+shows all stream settings that can be modified by an organization administrator.
 
-To change the name of a stream, first click on the stream you want to change. After selecting a stream, a list of settings should appear in the right-hand panel under **Stream Settings.** Scroll down to **Administrator settings** to see the option to change the stream's name.
+5. Locate the **Rename stream**, and type in the new stream name in the **Rename stream**
+field.
 
-![Stream Settings](/static/images/help/stream-settings-rename.png)
+    !!! tip ""
+        Your new stream name must be unique to all other stream names and no
+        longer than 60 characters.
 
-Once the **Rename stream** field is selected, type in the new stream name. Your new stream name must be unique and no longer than 60 characters.
-If your stream name is valid, clicking the **Rename stream** button will save your changes.
+5. If your stream name is valid, clicking the **Rename stream** button will
+save your changes.

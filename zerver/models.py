@@ -242,27 +242,9 @@ class Realm(ModelReprMixin, models.Model):
 
 post_save.connect(flush_realm, sender=Realm)
 
-# This function is about to be deprecated. Consider using
-# get_realm_by_string_id instead.
-def get_realm(domain):
+def get_realm(string_id):
     # type: (Text) -> Optional[Realm]
-    if not domain:
-        return None
-    try:
-        return Realm.objects.get(domain__iexact=domain.strip())
-    except Realm.DoesNotExist:
-        return None
-
-# Added to assist with the domain to string_id transition. Will eventually
-# be renamed and replace get_realm.
-def get_realm_by_string_id(string_id):
-    # type: (Text) -> Optional[Realm]
-    if not string_id:
-        return None
-    try:
-        return Realm.objects.get(string_id=string_id)
-    except Realm.DoesNotExist:
-        return None
+    return Realm.objects.filter(string_id=string_id).first()
 
 def completely_open(realm):
     # type: (Realm) -> bool
@@ -283,7 +265,7 @@ def get_unique_open_realm():
     # On production installations, the (usually "zulip.com") system
     # realm is an empty realm just used for system bots, so don't
     # include it in this accounting.
-    realms = realms.exclude(domain__in=settings.SYSTEM_ONLY_REALMS)
+    realms = realms.exclude(string_id__in=settings.SYSTEM_ONLY_REALMS)
     if len(realms) != 1:
         return None
     realm = realms[0]
@@ -352,7 +334,7 @@ def email_allowed_for_realm(email, realm):
 
 def list_of_domains_for_realm(realm):
     # type: (Realm) -> List[Text]
-    return list(RealmAlias.objects.filter(realm = realm).values_list('domain', flat=True))
+    return list(RealmAlias.objects.filter(realm = realm).values('domain', 'id'))
 
 class RealmEmoji(ModelReprMixin, models.Model):
     author = models.ForeignKey('UserProfile', blank=True, null=True)
@@ -431,47 +413,46 @@ class RealmFilter(models.Model):
         # type: () -> Text
         return u"<RealmFilter(%s): %s %s>" % (self.realm.domain, self.pattern, self.url_format_string)
 
-def get_realm_filters_cache_key(domain):
-    # type: (Text) -> Text
-    return u'all_realm_filters:%s' % (domain,)
+def get_realm_filters_cache_key(realm_id):
+    # type: (int) -> Text
+    return u'all_realm_filters:%s' % (realm_id,)
 
 # We have a per-process cache to avoid doing 1000 remote cache queries during page load
-per_request_realm_filters_cache = {} # type: Dict[Text, List[Tuple[Text, Text, int]]]
+per_request_realm_filters_cache = {} # type: Dict[int, List[Tuple[Text, Text, int]]]
 
-def domain_in_local_realm_filters_cache(domain):
-    # type: (Text) -> bool
-    return domain in per_request_realm_filters_cache
+def realm_in_local_realm_filters_cache(realm_id):
+    # type: (int) -> bool
+    return realm_id in per_request_realm_filters_cache
 
-def realm_filters_for_domain(domain):
-    # type: (Text) -> List[Tuple[Text, Text, int]]
-    domain = domain.lower()
-    if not domain_in_local_realm_filters_cache(domain):
-        per_request_realm_filters_cache[domain] = realm_filters_for_domain_remote_cache(domain)
-    return per_request_realm_filters_cache[domain]
+def realm_filters_for_realm(realm_id):
+    # type: (int) -> List[Tuple[Text, Text, int]]
+    if not realm_in_local_realm_filters_cache(realm_id):
+        per_request_realm_filters_cache[realm_id] = realm_filters_for_realm_remote_cache(realm_id)
+    return per_request_realm_filters_cache[realm_id]
 
 @cache_with_key(get_realm_filters_cache_key, timeout=3600*24*7)
-def realm_filters_for_domain_remote_cache(domain):
-    # type: (Text) -> List[Tuple[Text, Text, int]]
+def realm_filters_for_realm_remote_cache(realm_id):
+    # type: (int) -> List[Tuple[Text, Text, int]]
     filters = []
-    for realm_filter in RealmFilter.objects.filter(realm=get_realm(domain)):
+    for realm_filter in RealmFilter.objects.filter(realm_id=realm_id):
         filters.append((realm_filter.pattern, realm_filter.url_format_string, realm_filter.id))
 
     return filters
 
 def all_realm_filters():
-    # type: () -> Dict[Text, List[Tuple[Text, Text, int]]]
-    filters = defaultdict(list) # type: Dict[Text, List[Tuple[Text, Text, int]]]
+    # type: () -> Dict[int, List[Tuple[Text, Text, int]]]
+    filters = defaultdict(list) # type: Dict[int, List[Tuple[Text, Text, int]]]
     for realm_filter in RealmFilter.objects.all():
-        filters[realm_filter.realm.domain].append((realm_filter.pattern, realm_filter.url_format_string, realm_filter.id))
+        filters[realm_filter.realm_id].append((realm_filter.pattern, realm_filter.url_format_string, realm_filter.id))
 
     return filters
 
 def flush_realm_filter(sender, **kwargs):
     # type: (Any, **Any) -> None
-    realm = kwargs['instance'].realm
-    cache_delete(get_realm_filters_cache_key(realm.domain))
+    realm_id = kwargs['instance'].realm_id
+    cache_delete(get_realm_filters_cache_key(realm_id))
     try:
-        per_request_realm_filters_cache.pop(realm.domain.lower())
+        per_request_realm_filters_cache.pop(realm_id)
     except KeyError:
         pass
 
@@ -521,6 +502,7 @@ class UserProfile(ModelReprMixin, AbstractBaseUser, PermissionsMixin):
 
     # PM + @-mention notifications.
     enable_desktop_notifications = models.BooleanField(default=True) # type: bool
+    pm_content_in_desktop_notifications = models.BooleanField(default=True)  # type: bool
     enable_sounds = models.BooleanField(default=True) # type: bool
     enable_offline_email_notifications = models.BooleanField(default=True) # type: bool
     enable_offline_push_notifications = models.BooleanField(default=True) # type: bool
@@ -543,7 +525,7 @@ class UserProfile(ModelReprMixin, AbstractBaseUser, PermissionsMixin):
     default_all_public_streams = models.BooleanField(default=False) # type: bool
 
     # UI vars
-    enter_sends = models.NullBooleanField(default=True) # type: Optional[bool]
+    enter_sends = models.NullBooleanField(default=False) # type: Optional[bool]
     autoscroll_forever = models.BooleanField(default=False) # type: bool
     left_side_userlist = models.BooleanField(default=False) # type: bool
 
@@ -1250,16 +1232,16 @@ def get_huddle(id_list):
 @cache_with_key(lambda huddle_hash, id_list: huddle_hash_cache_key(huddle_hash), timeout=3600*24*7)
 def get_huddle_backend(huddle_hash, id_list):
     # type: (Text, List[int]) -> Huddle
-    (huddle, created) = Huddle.objects.get_or_create(huddle_hash=huddle_hash)
-    if created:
-        with transaction.atomic():
+    with transaction.atomic():
+        (huddle, created) = Huddle.objects.get_or_create(huddle_hash=huddle_hash)
+        if created:
             recipient = Recipient.objects.create(type_id=huddle.id,
                                                  type=Recipient.HUDDLE)
             subs_to_create = [Subscription(recipient=recipient,
                                            user_profile=get_user_profile_by_id(user_profile_id))
                               for user_profile_id in id_list]
             Subscription.objects.bulk_create(subs_to_create)
-    return huddle
+        return huddle
 
 def clear_database():
     # type: () -> None

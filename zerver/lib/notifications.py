@@ -147,7 +147,7 @@ def build_message_list(user_profile, messages):
         # type: (UserProfile, Message) -> Dict[str, Any]
         disp_recipient = get_display_recipient(message.recipient)
         if message.recipient.type == Recipient.PERSONAL:
-            header = u"You and %s" % (message.sender.full_name)
+            header = u"You and %s" % (message.sender.full_name,)
             html_link = pm_narrow_url(user_profile.realm, [message.sender.email])
             header_html = u"<a style='color: #ffffff;' href='%s'>%s</a>" % (html_link, header)
         elif message.recipient.type == Recipient.HUDDLE:
@@ -453,7 +453,7 @@ def send_local_email_template_with_delay(recipients, template_prefix,
                                          tags=[], sender={'email': settings.NOREPLY_EMAIL_ADDRESS, 'name': 'Zulip'}):
     # type: (List[Dict[str, Any]], Text, Dict[str, Text], datetime.timedelta, Iterable[Text], Dict[str, Text]) -> None
     html_content = loader.render_to_string(template_prefix + ".html", template_payload)
-    text_content = loader.render_to_string(template_prefix + ".text", template_payload)
+    text_content = loader.render_to_string(template_prefix + ".txt", template_payload)
     subject = loader.render_to_string(template_prefix + ".subject", template_payload).strip()
 
     send_future_email(recipients,

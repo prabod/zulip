@@ -157,6 +157,7 @@ DEFAULT_SETTINGS = {'TWITTER_CONSUMER_KEY': '',
                     'REGISTER_LINK_DISABLED': False,
                     'LOGIN_LINK_DISABLED': False,
                     'ABOUT_LINK_DISABLED': False,
+                    'FIND_TEAM_LINK_DISABLED': True,
                     'CUSTOM_LOGO_URL': None,
                     'VERBOSE_SUPPORT_OFFERS': False,
                     'STATSD_HOST': '',
@@ -184,12 +185,14 @@ DEFAULT_SETTINGS = {'TWITTER_CONSUMER_KEY': '',
                     'REALM_CREATION_LINK_VALIDITY_DAYS': 7,
                     'TERMS_OF_SERVICE': None,
                     'TOS_VERSION': None,
-                    'SYSTEM_ONLY_REALMS': {"zulip.com"},
+                    'SYSTEM_ONLY_REALMS': {"zulip"},
                     'FIRST_TIME_TOS_TEMPLATE': None,
                     'USING_PGROONGA': False,
                     'POST_MIGRATION_CACHE_FLUSHING': False,
                     'ENABLE_FILE_LINKS': False,
                     'USE_WEBSOCKETS': True,
+                    'PASSWORD_MIN_LENGTH': 6,
+                    'PASSWORD_MIN_ZXCVBN_QUALITY': 0.4,
                     }
 
 for setting_name, setting_val in six.iteritems(DEFAULT_SETTINGS):
@@ -211,7 +214,6 @@ REQUIRED_SETTINGS = [("EXTERNAL_HOST", "zulip.example.com"),
                      ("AUTHENTICATION_BACKENDS", ()),
                      ("NOREPLY_EMAIL_ADDRESS", "noreply@example.com"),
                      ("DEFAULT_FROM_EMAIL", "Zulip <zulip@example.com>"),
-                     ("ALLOWED_HOSTS", ["*", '127.0.0.1', 'localhost']),
                      ]
 
 if ADMINS == "":
@@ -679,7 +681,9 @@ PIPELINE = {
                 'styles/settings.css',
                 'styles/subscriptions.css',
                 'styles/compose.css',
+                'styles/reactions.css',
                 'styles/left-sidebar.css',
+                'styles/right-sidebar.css',
                 'styles/overlay.css',
                 'styles/pygments.css',
                 'styles/thirdparty-fonts.css',
@@ -698,7 +702,9 @@ PIPELINE = {
                 'styles/settings.css',
                 'styles/subscriptions.css',
                 'styles/compose.css',
+                'styles/reactions.css',
                 'styles/left-sidebar.css',
+                'styles/right-sidebar.css',
                 'styles/overlay.css',
                 'styles/pygments.css',
                 'styles/thirdparty-fonts.css',
@@ -718,6 +724,7 @@ PIPELINE = {
     },
     'JAVASCRIPT': {},
 }
+
 JS_SPECS = {
     'common': {
         'source_filenames': (
@@ -731,13 +738,13 @@ JS_SPECS = {
     },
     'signup': {
         'source_filenames': (
-            'js/signup.js',
+            'js/portico/signup.js',
             'node_modules/jquery-validation/dist/jquery.validate.js',
             ),
         'output_filename':  'min/signup.js'
     },
     'api': {
-        'source_filenames': ('js/api.js',),
+        'source_filenames': ('js/portico/api.js',),
         'output_filename':  'min/api.js'
     },
     'app_debug': {
@@ -749,12 +756,10 @@ JS_SPECS = {
             'third/bootstrap-notify/js/bootstrap-notify.js',
             'third/html5-formdata/formdata.js',
             'node_modules/jquery-validation/dist/jquery.validate.js',
-            'node_modules/sockjs-client/sockjs.js',
             'third/jquery-form/jquery.form.js',
             'third/jquery-filedrop/jquery.filedrop.js',
             'third/jquery-caret/jquery.caret.1.5.2.js',
             'third/xdate/xdate.dev.js',
-            'third/spin/spin.js',
             'third/jquery-mousewheel/jquery.mousewheel.js',
             'third/jquery-throttle-debounce/jquery.ba-throttle-debounce.js',
             'third/jquery-idle/jquery.idle.js',
@@ -764,6 +769,7 @@ JS_SPECS = {
             'third/spectrum/spectrum.js',
             'third/string-prototype-codepointat/codepointat.js',
             'third/winchan/winchan.js',
+            'third/sockjs/sockjs-0.3.4.js',
             'third/handlebars/handlebars.runtime.js',
             'third/marked/lib/marked.js',
             'templates/compiled.js',
@@ -788,6 +794,7 @@ JS_SPECS = {
             'js/filter.js',
             'js/message_list_view.js',
             'js/message_list.js',
+            'js/message_live_update.js',
             'js/narrow.js',
             'js/reload.js',
             'js/compose_fade.js',
@@ -838,6 +845,7 @@ JS_SPECS = {
             'js/referral.js',
             'js/custom_markdown.js',
             'js/bot_data.js',
+            'js/reactions.js',
             # JS bundled by webpack is also included here if PIPELINE_ENABLED setting is true
         ],
         'output_filename': 'min/app.js'
@@ -848,10 +856,18 @@ JS_SPECS = {
         ),
         'output_filename': 'min/activity.js'
     },
+    'stats': {
+        'source_filenames': (
+            'node_modules/plotly.js/dist/plotly.js',
+            'node_modules/jquery/dist/jquery.js',
+            'js/portico/stats.js'
+        ),
+        'output_filename': 'min/stats.js'
+    },
     # We also want to minify sockjs separately for the sockjs iframe transport
     'sockjs': {
-        'source_filenames': ('node_modules/sockjs-client/sockjs.js',),
-        'output_filename': 'min/sockjs.min.js'
+        'source_filenames': ('third/sockjs/sockjs-0.3.4.js',),
+        'output_filename': 'min/sockjs-0.3.4.min.js'
     },
 }
 

@@ -89,10 +89,6 @@ function populate_group_from_message_container(group, message_container) {
     var time = new XDate(message_container.msg.timestamp * 1000);
     var date_element = timerender.render_date(time)[0];
 
-    if (!message_container.show_date) {
-        date_element.className = "hide-date";
-    }
-
     group.date = date_element.outerHTML;
 }
 
@@ -134,7 +130,7 @@ MessageListView.prototype = {
         function start_group() {
             return {
                 message_containers: [],
-                message_group_id: _.uniqueId('message_group_')
+                message_group_id: _.uniqueId('message_group_'),
             };
         }
 
@@ -162,6 +158,8 @@ MessageListView.prototype = {
         }
 
         _.each(message_containers, function (message_container) {
+            var message_reactions = reactions.get_message_reactions(message_container.msg);
+            message_container.msg.message_reactions = message_reactions;
             message_container.include_recipient = false;
             message_container.include_footer    = false;
 
@@ -282,7 +280,7 @@ MessageListView.prototype = {
             prepend_groups: [],
             rerender_groups: [],
             append_messages: [],
-            rerender_messages: []
+            rerender_messages: [],
         };
         var first_group;
         var second_group;
@@ -331,6 +329,7 @@ MessageListView.prototype = {
             } else if (first_group !== undefined && second_group !== undefined) {
                 var last_msg_container = _.last(first_group.message_containers);
                 var first_msg_container = _.first(second_group.message_containers);
+
                 if (same_day(last_msg_container, first_msg_container)) {
                     // Clear the date if it is the same as the last group
                     second_group.show_date = undefined;
@@ -447,7 +446,7 @@ MessageListView.prototype = {
             rendered_groups = $(templates.render('message_group', {
                 message_groups: message_actions.prepend_groups,
                 use_match_properties: self.list.filter.is_search(),
-                table_name: self.table_name
+                table_name: self.table_name,
             }));
 
             dom_messages = rendered_groups.find('.message_row');
@@ -474,7 +473,7 @@ MessageListView.prototype = {
                 rendered_groups = $(templates.render('message_group', {
                     message_groups: [message_group],
                     use_match_properties: self.list.filter.is_search(),
-                    table_name: self.table_name
+                    table_name: self.table_name,
                 }));
 
                 dom_messages = rendered_groups.find('.message_row');
@@ -490,7 +489,11 @@ MessageListView.prototype = {
         if (message_actions.rerender_messages.length > 0) {
             _.each(message_actions.rerender_messages, function (message_container) {
                 var old_row = self.get_row(message_container.msg.id);
-                var msg_to_render = _.extend(message_container, {table_name: this.table_name});
+                var msg_reactions = reactions.get_message_reactions(message_container.msg);
+                message_container.msg.message_reactions = msg_reactions;
+                var msg_to_render = _.extend(message_container, {
+                    table_name: this.table_name,
+                });
                 var row = $(templates.render('single_message', msg_to_render));
                 self._post_process_dom_messages(row.get());
                 old_row.replaceWith(row);
@@ -504,7 +507,11 @@ MessageListView.prototype = {
             last_message_row = table.find('.message_row:last').expectOne();
             last_group_row = rows.get_message_recipient_row(last_message_row);
             dom_messages = $(_.map(message_actions.append_messages, function (message_container) {
-                var msg_to_render = _.extend(message_container, {table_name: this.table_name});
+                var msg_reactions = reactions.get_message_reactions(message_container.msg);
+                message_container.msg.message_reactions = msg_reactions;
+                var msg_to_render = _.extend(message_container, {
+                    table_name: this.table_name,
+                });
                 return templates.render('single_message', msg_to_render);
             }).join('')).filter('.message_row');
 
@@ -522,7 +529,7 @@ MessageListView.prototype = {
             rendered_groups = $(templates.render('message_group', {
                 message_groups: message_actions.append_groups,
                 use_match_properties: self.list.filter.is_search(),
-                table_name: self.table_name
+                table_name: self.table_name,
             }));
 
             dom_messages = rendered_groups.find('.message_row');
@@ -783,7 +790,11 @@ MessageListView.prototype = {
         this._add_msg_timestring(message_container);
         this._maybe_format_me_message(message_container);
 
-        var msg_to_render = _.extend(message_container, {table_name: this.table_name});
+        var msg_reactions = reactions.get_message_reactions(message_container.msg);
+        message_container.msg.message_reactions = msg_reactions;
+        var msg_to_render = _.extend(message_container, {
+            table_name: this.table_name,
+        });
         var rendered_msg = $(templates.render('single_message', msg_to_render));
         this._post_process_dom_messages(rendered_msg.get());
         row.replaceWith(rendered_msg);
@@ -835,7 +846,7 @@ MessageListView.prototype = {
 
         // If the pointer is high on the page such that there is a
         // lot of empty space below and the render window is full, a
-        // newly recieved message should trigger a rerender so that
+        // newly received message should trigger a rerender so that
         // the new message, which will appear in the viewable area,
         // is rendered.
         this.maybe_rerender();
@@ -885,7 +896,7 @@ MessageListView.prototype = {
         var rendered_trailing_bookend = $(templates.render('bookend', {
             bookend_content: trailing_bookend_content,
             trailing: true,
-            subscribed: subscribed
+            subscribed: subscribed,
         }));
         rows.get_table(this.table_name).append(rendered_trailing_bookend);
     },
@@ -925,7 +936,7 @@ MessageListView.prototype = {
         } else {
             message_container.status_message = false;
         }
-    }
+    },
 };
 
 }());

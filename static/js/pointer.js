@@ -18,7 +18,7 @@ var pointer_update_in_flight = false;
 function update_pointer() {
     if (!pointer_update_in_flight) {
         pointer_update_in_flight = true;
-        return channel.put({
+        return channel.post({
             url:      '/json/users/me/pointer',
             idempotent: true,
             data:     {pointer: pointer.furthest_read},
@@ -28,7 +28,7 @@ function update_pointer() {
             },
             error: function () {
                 pointer_update_in_flight = false;
-            }
+            },
         });
     }
     // Return an empty, resolved Deferred.
@@ -72,7 +72,7 @@ exports.fast_forward_pointer = function () {
                                      save_compose: true});
                 });
             });
-        }
+        },
     });
 };
 

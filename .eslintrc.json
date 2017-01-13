@@ -34,6 +34,7 @@
         "compose_fade": false,
         "subs": false,
         "timerender": false,
+        "message_live_update": false,
         "message_edit": false,
         "reload": false,
         "composebox_typeahead": false,
@@ -78,6 +79,7 @@
         "activity": false,
         "invite": false,
         "colorspace": false,
+        "reactions": false,
         "tutorial": false,
         "templates": false,
         "alert_words": false,
@@ -87,7 +89,8 @@
         "current_msg_list": true,
         "home_msg_list": false,
         "pm_list": false,
-        "unread_ui": false
+        "unread_ui": false,
+        "Plotly": false
     },
     "rules": {
         "no-restricted-syntax": 1,
@@ -137,7 +140,13 @@
         "no-caller": 2,
         "no-bitwise": 2,
         "no-catch-shadow": 2,
-        "comma-dangle": 0,
+        "comma-dangle": ["error", {
+            "arrays": "always-multiline",
+            "objects": "always-multiline",
+            "imports": "always-multiline",
+            "exports": "always-multiline",
+            "functions": "never"
+        }],
         "no-console": 1,
         "no-control-regex": 2,
         "no-debugger": 2,
@@ -179,7 +188,7 @@
         "no-loop-func": 2,
         "no-labels": 2,
         "no-unused-vars": ["error", { "vars": "local", "args": "after-used",
-                                      "varsIgnorePattern": "print_elapsed_time"
+                                      "varsIgnorePattern": "print_elapsed_time|check_duplicate_ids"
                                     }],
         "no-script-url": 2,
         "no-proto": 2,

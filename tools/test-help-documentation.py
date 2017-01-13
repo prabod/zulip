@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 from __future__ import print_function
+import optparse
 import os
 import sys
 import subprocess
@@ -19,6 +20,11 @@ except ImportError as e:
 
 os.environ["EXTERNAL_HOST"] = "localhost:9981"
 
+parser = optparse.OptionParser()
+parser.add_option('--force', default=False,
+                  action="store_true",
+                  help='Run tests despite possible problems.')
+(options, args) = parser.parse_args()
 
 def assert_server_running(server):
     # type: (subprocess.Popen) -> None
@@ -32,8 +38,9 @@ def server_is_up(server):
     assert_server_running(server)
     try:
         # We could get a 501 error if the reverse proxy is up but the Django app isn't.
-        return requests.get('http://127.0.0.1:9981/accounts/home').status_code == 200
-    except:
+        r = requests.get('http://127.0.0.1:9981/accounts/home')
+        return r.status_code == 200
+    except requests.exceptions.RequestException:
         return False
 
 
@@ -45,7 +52,12 @@ if os.path.exists(LOG_FILE) and os.path.getsize(LOG_FILE) < 100000:
     log.write('\n\n')
 else:
     log = open(LOG_FILE, 'w')
-server = subprocess.Popen(('tools/run-dev.py', '--test'), stdout=log, stderr=log)
+
+run_dev_server_command = ['tools/run-dev.py', '--test']
+if options.force:
+    run_dev_server_command.append('--force')
+server = subprocess.Popen(run_dev_server_command, stdout=log, stderr=log)
+
 sys.stdout.write('Waiting for test server')
 try:
     while not server_is_up(server):

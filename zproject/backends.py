@@ -147,7 +147,7 @@ class SocialAuthMixin(ZulipAuthMixin):
         # dependency.
         from zerver.views.auth import (login_or_register_remote_user,
                                        redirect_to_subdomain_login_url)
-        from zerver.views import redirect_and_log_into_subdomain
+        from zerver.views.registration import redirect_and_log_into_subdomain
 
         return_data = kwargs.get('return_data', {})
 
@@ -423,7 +423,7 @@ class GitHubAuthBackend(SocialAuthMixin, GithubOAuth2):
             try:
                 user_profile = backend.do_auth(*args, **kwargs)
             except AuthFailed:
-                logging.info("User profile not member of team.")
+                logging.info("User is not member of GitHub team.")
                 user_profile = None
 
         elif (org_name):
@@ -431,7 +431,7 @@ class GitHubAuthBackend(SocialAuthMixin, GithubOAuth2):
             try:
                 user_profile = backend.do_auth(*args, **kwargs)
             except AuthFailed:
-                logging.info("User profile not member of organisation.")
+                logging.info("User is not member of GitHub organization.")
                 user_profile = None
 
         return self.process_do_auth(user_profile, *args, **kwargs)

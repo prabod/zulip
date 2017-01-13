@@ -83,6 +83,13 @@ $(function () {
         toggle_star(rows.id($(this).closest(".message_row")));
     });
 
+    $("#main_div").on("click", ".message_reaction", function (e) {
+        e.stopPropagation();
+        var emoji_name = $(this).attr('data-emoji-name');
+        var message_id = $(this).parent().attr('data-message-id');
+        reactions.message_reaction_on_click(message_id, emoji_name);
+    });
+
     $("#main_div").on("click", "a.stream", function (e) {
         e.preventDefault();
         var stream = stream_data.get_sub_by_id($(this).attr('data-stream-id'));
@@ -91,6 +98,14 @@ $(function () {
             return;
         }
         window.location.href = $(this).attr('href');
+    });
+
+    // NOTIFICATION CLICK
+
+    $('body').on('click', '.notification', function () {
+        var payload = $(this).data("narrow");
+        ui.change_tab_to('#home');
+        narrow.activate(payload.raw_operators, payload.opts_notif);
     });
 
     // MESSAGE EDITING
@@ -339,6 +354,11 @@ $(function () {
         compose.cancel();
     });
 
+    $("#join_unsub_stream").click(function () {
+        subs.launch();
+        components.toggle.lookup("stream-filter-toggle").goto("All Streams");
+    });
+
     // FEEDBACK
 
     // Keep these 2 feedback bot triggers separate because they have to
@@ -367,8 +387,8 @@ $(function () {
             relay_url: "https://webathena.mit.edu/relay.html",
             params: {
                 realm: "ATHENA.MIT.EDU",
-                principal: principal
-            }
+                principal: principal,
+            },
         }, function (err, r) {
             if (err) {
                 blueslip.warn(err);
@@ -387,7 +407,7 @@ $(function () {
                 },
                 error: function () {
                     $("#zephyr-mirror-error").show();
-                }
+                },
             });
         });
         $('#settings-dropdown').dropdown("toggle");
@@ -425,13 +445,13 @@ $(function () {
             if ($target.parent().hasClass("youtube-video")) {
                 ui.lightbox({
                     type: "youtube",
-                    id: $target.data("id")
+                    id: $target.data("id"),
                 });
             } else {
                 ui.lightbox({
                     type: "photo",
                     image: img,
-                    user: user
+                    user: user,
                 });
             }
         });

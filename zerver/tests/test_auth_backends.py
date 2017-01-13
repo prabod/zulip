@@ -23,7 +23,7 @@ from zerver.lib.test_classes import (
     ZulipTestCase,
 )
 from zerver.models import \
-    get_realm_by_string_id, get_user_profile_by_email, email_to_username, UserProfile, \
+    get_realm, get_user_profile_by_email, email_to_username, UserProfile, \
     PreregistrationUser, Realm
 
 from confirmation.models import Confirmation
@@ -45,7 +45,7 @@ from social.backends.github import GithubOrganizationOAuth2, GithubTeamOAuth2, \
 from six.moves import urllib
 from six.moves.http_cookies import SimpleCookie
 import ujson
-from fakeldap import MockLDAP
+from zerver.lib.test_helpers import MockLDAP
 
 class AuthBackendTest(TestCase):
     def verify_backend(self, backend, good_args=None,
@@ -644,7 +644,7 @@ class GoogleSubdomainLoginTest(GoogleOAuthTest):
         """If the user doesn't exist yet, Google auth can be used to register an account"""
         with self.settings(REALMS_HAVE_SUBDOMAINS=True), (
              mock.patch('zerver.views.auth.get_subdomain', return_value='zulip')), (
-             mock.patch('zerver.views.get_subdomain', return_value='zulip')):
+             mock.patch('zerver.views.registration.get_subdomain', return_value='zulip')):
 
             email = "newuser@zulip.com"
             token_response = ResponseMock(200, {'access_token': "unique_token"})
@@ -1263,9 +1263,8 @@ class TestLDAP(ZulipTestCase):
                 LDAP_APPEND_DOMAIN='zulip.com',
                 AUTH_LDAP_BIND_PASSWORD='',
                 AUTH_LDAP_USER_DN_TEMPLATE='uid=%(user)s,ou=users,dc=zulip,dc=com'):
-            with self.assertRaisesRegex(self.mock_ldap.INVALID_CREDENTIALS,
-                                        'uid=hamlet,ou=users,dc=zulip,dc=com:wrong'):
-                self.backend.authenticate('hamlet@zulip.com', 'wrong')
+                user = self.backend.authenticate('hamlet@zulip.com', 'wrong')
+                self.assertIs(user, None)
 
     @override_settings(AUTHENTICATION_BACKENDS=('zproject.backends.ZulipLDAPAuthBackend',))
     def test_login_failure_due_to_nonexistent_user(self):
@@ -1279,9 +1278,8 @@ class TestLDAP(ZulipTestCase):
                 LDAP_APPEND_DOMAIN='zulip.com',
                 AUTH_LDAP_BIND_PASSWORD='',
                 AUTH_LDAP_USER_DN_TEMPLATE='uid=%(user)s,ou=users,dc=zulip,dc=com'):
-            with self.assertRaisesRegex(self.mock_ldap.INVALID_CREDENTIALS,
-                                        'uid=nonexistent,ou=users,dc=zulip,dc=com:testing'):
-                self.backend.authenticate('nonexistent@zulip.com', 'testing')
+                user = self.backend.authenticate('nonexistent@zulip.com', 'testing')
+                self.assertIs(user, None)
 
     @override_settings(AUTHENTICATION_BACKENDS=('zproject.backends.ZulipLDAPAuthBackend',))
     def test_ldap_permissions(self):
@@ -1347,7 +1345,7 @@ class TestLDAP(ZulipTestCase):
         with self.settings(AUTH_LDAP_USER_ATTR_MAP=ldap_user_attr_map):
             backend = self.backend
             email = 'nonexisting@zulip.com'
-            realm = get_realm_by_string_id('zulip')
+            realm = get_realm('zulip')
             do_deactivate_realm(realm)
             with self.assertRaisesRegex(Exception, 'Realm has been deactivated'):
                 backend.get_or_create_user(email, _LDAPUser())
@@ -1447,7 +1445,7 @@ class TestPasswordAuthEnabled(ZulipTestCase):
     def test_password_auth_enabled_for_ldap(self):
         # type: () -> None
         with self.settings(AUTHENTICATION_BACKENDS=('zproject.backends.ZulipLDAPAuthBackend',)):
-            realm = Realm.objects.get(domain='zulip.com')
+            realm = Realm.objects.get(string_id='zulip')
             self.assertTrue(password_auth_enabled(realm))
 
 class TestMaybeSendToRegistration(ZulipTestCase):
@@ -1520,7 +1518,7 @@ class TestAdminSetBackends(ZulipTestCase):
         result = self.client_patch("/json/realm", {
             'authentication_methods': ujson.dumps({u'Email': False, u'Dev': True})})
         self.assert_json_success(result)
-        realm = get_realm_by_string_id('zulip')
+        realm = get_realm('zulip')
         self.assertFalse(password_auth_enabled(realm))
         self.assertTrue(dev_auth_enabled(realm))
 
@@ -1531,7 +1529,7 @@ class TestAdminSetBackends(ZulipTestCase):
         result = self.client_patch("/json/realm", {
             'authentication_methods': ujson.dumps({u'Email': False, u'Dev': False})})
         self.assert_json_error(result, 'At least one authentication method must be enabled.', status_code=403)
-        realm = get_realm_by_string_id('zulip')
+        realm = get_realm('zulip')
         self.assertTrue(password_auth_enabled(realm))
         self.assertTrue(dev_auth_enabled(realm))
 
@@ -1543,7 +1541,7 @@ class TestAdminSetBackends(ZulipTestCase):
         result = self.client_patch("/json/realm", {
             'authentication_methods': ujson.dumps({u'Email': False, u'Dev': True, u'GitHub': False})})
         self.assert_json_success(result)
-        realm = get_realm_by_string_id('zulip')
+        realm = get_realm('zulip')
         # Check that unsupported backend is not enabled
         self.assertFalse(github_auth_enabled(realm))
         self.assertTrue(dev_auth_enabled(realm))

@@ -12,7 +12,7 @@ var actions_dropdown_hotkeys = [
     'up_arrow',
     'vim_up',
     'vim_down',
-    'enter'
+    'enter',
 ];
 
 // Note that multiple keys can map to the same event_name, which
@@ -22,7 +22,7 @@ var actions_dropdown_hotkeys = [
 var hotkeys_shift = {
     // these can be triggered by shift + key only
     9: {name: 'shift_tab', message_view_only: false}, // tab
-    32: {name: 'page_up', message_view_only: true}  // space bar
+    32: {name: 'page_up', message_view_only: true},  // space bar
 };
 var hotkeys_no_modifiers = {
     // these can be triggered by key only (without shift)
@@ -33,7 +33,7 @@ var hotkeys_no_modifiers = {
     35: {name: 'end', message_view_only: true}, // end
     36: {name: 'home', message_view_only: true}, // home
     38: {name: 'up_arrow', message_view_only: true}, // up arrow
-    40: {name: 'down_arrow', message_view_only: true} // down arrow
+    40: {name: 'down_arrow', message_view_only: true}, // down arrow
 };
 var hotkeys_shift_insensitive = {
     // these can be triggered by key or shift + key
@@ -43,6 +43,7 @@ var hotkeys_shift_insensitive = {
     27: {name: 'escape', message_view_only: false}, // escape
     47: {name: 'search', message_view_only: false}, // '/'
     63: {name: 'show_shortcuts', message_view_only: false}, // '?'
+    64: {name: 'compose_reply_with_mention', message_view_only: true}, // '@'
     65: {name: 'stream_cycle_backward', message_view_only: true}, // 'A'
     67: {name: 'compose_private_message', message_view_only: true}, // 'C'
     68: {name: 'stream_cycle_forward', message_view_only: true}, // 'D'
@@ -58,7 +59,7 @@ var hotkeys_shift_insensitive = {
     114: {name: 'reply_message', message_view_only: true}, // 'r'
     115: {name: 'narrow_by_recipient', message_view_only: true}, // 's'
     118: {name: 'narrow_private', message_view_only: true}, // 'v'
-    119: {name: 'query_streams', message_view_only: false} // 'w'
+    119: {name: 'query_streams', message_view_only: false}, // 'w'
 };
 
 var tab_up_down = (function () {
@@ -75,7 +76,7 @@ var tab_up_down = (function () {
             },
             prev: function () {
                 return $target.closest("li").prev().find("a");
-            }
+            },
         };
     };
 }());
@@ -194,7 +195,7 @@ function process_hotkey(e) {
         if ($("#overlay").hasClass("show")) {
             ui.exit_lightbox_photo();
             return true;
-        } else if ($("#subscription_overlay").css("display") === "block") {
+        } else if ($("#subscription_overlay").is(":visible")) {
             $("#subscription_overlay").click();
             return true;
         }
@@ -363,6 +364,11 @@ function process_hotkey(e) {
             return true;
         case 'respond_to_author': // 'R': respond to author
             compose.respond_to_message({reply_type: "personal", trigger: 'hotkey pm'});
+            return true;
+        case 'compose_reply_with_mention': // '@': respond to message with mention to author
+            compose.respond_to_message({trigger: 'hotkey'});
+            var message = current_msg_list.selected_message();
+            $("#new_message_content").val('@**' + message.sender_full_name + '** ');
             return true;
     }
 

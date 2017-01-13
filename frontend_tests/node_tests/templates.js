@@ -91,6 +91,32 @@ function render(template_name, args) {
     global.write_handlebars_output("actions_popover_content", html);
 }());
 
+(function admin_alias_list() {
+    var html = "<table>";
+    var args = {
+        alias: {
+            id: 1,
+            domain: 'zulip.org',
+        },
+    };
+    html += render("admin_alias_list", args);
+    html += "</table>";
+
+    var button = $(html).find('.btn');
+    var domain = $(html).find('.domain');
+    var row = button.closest('tr');
+
+    assert.equal(button.text().trim(), "Delete");
+    assert(button.hasClass("delete_alias"));
+    assert.equal(button.data("id"), "1");
+
+    assert.equal(domain.text(), "zulip.org");
+
+    assert.equal(row.attr("id"), "alias_1");
+
+    global.write_handlebars_output("admin_alias_list", html);
+}());
+
 (function admin_default_streams_list() {
     var html = '<table>';
     var streams = ['devel', 'trac', 'zulip'];
@@ -483,6 +509,7 @@ function render(template_name, args) {
         },
     ];
 
+    render('loader');
     var html = render('message_group', {message_groups: groups, use_match_properties: true});
 
     var first_message_text = $(html).next('.recipient_row').find('div.messagebox:first .message_content').text().trim();
@@ -532,6 +559,21 @@ function render(template_name, args) {
     assert($(html).text().trim(), "Message to stream devel");
 }());
 
+(function message_reaction() {
+    var args = {
+        emoji_name: 'smile',
+        message_id: '1',
+    };
+
+    var html = '';
+    html += '<div>';
+    html += render('message_reaction', args);
+    html += '</div>';
+
+    global.write_handlebars_output("message_reaction", html);
+    assert($(html).find(".message_reaction").has(".emoji .emoji-smile"));
+}());
+
 (function new_stream_users() {
     var args = {
         users: [
@@ -574,6 +616,22 @@ function render(template_name, args) {
     var button_area = $(html).find(".propagate-notifications-controls");
     assert.equal(button_area.find(".yes_propagate_notifications").text().trim(), 'Yes');
     assert.equal(button_area.find(".no_propagate_notifications").text().trim(), 'No');
+}());
+
+(function reaction_popover_content() {
+    var args = {
+        search: 'Search',
+        message_id: 1,
+        emojis: global.emoji.emojis_name_to_css_class,
+    };
+
+    var html = '<div style="height: 250px">';
+    html += render('reaction_popover_content', args);
+    html += "</div>";
+    // test to make sure the first emoji is present in the popover
+    var emoji_key = $(html).find(".emoji-100").attr('title');
+    assert.equal(emoji_key, ':100:');
+    global.write_handlebars_output("reaction_popover_content", html);
 }());
 
 (function settings_tab() {

@@ -30,12 +30,12 @@ from zerver.models import Realm, RealmEmoji, Stream, UserProfile, UserActivity, 
     Client, DefaultStream, UserPresence, Referral, PushDeviceToken, MAX_SUBJECT_LENGTH, \
     MAX_MESSAGE_LENGTH, get_client, get_stream, get_recipient, get_huddle, \
     get_user_profile_by_id, PreregistrationUser, get_display_recipient, \
-    get_realm, get_realm_by_string_id, bulk_get_recipients, \
+    get_realm, bulk_get_recipients, \
     email_allowed_for_realm, email_to_username, display_recipient_cache_key, \
     get_user_profile_by_email, get_stream_cache_key, \
     UserActivityInterval, get_active_user_dicts_in_realm, get_active_streams, \
-    realm_filters_for_domain, RealmFilter, receives_offline_notifications, \
-    ScheduledJob, realm_filters_for_domain, get_owned_bot_dicts, \
+    realm_filters_for_realm, RealmFilter, receives_offline_notifications, \
+    ScheduledJob, get_owned_bot_dicts, \
     get_old_unclaimed_attachments, get_cross_realm_emails, receives_online_notifications, \
     Reaction
 
@@ -335,10 +335,10 @@ def process_new_human_user(user_profile, prereg_user=None, newsletter_data=None)
         queue_json_publish(
             "signups",
             {
-                'EMAIL': user_profile.email,
-                'merge_vars': {
+                'email_address': user_profile.email,
+                'merge_fields': {
                     'NAME': user_profile.full_name,
-                    'REALM_ID': user_profile.realm.id,
+                    'REALM_ID': user_profile.realm_id,
                     'OPTIN_IP': newsletter_data["IP"],
                     'OPTIN_TIME': datetime.datetime.isoformat(now().replace(microsecond=0)),
                 },
@@ -918,7 +918,7 @@ def do_send_messages(messages):
             if message['stream'] is None:
                 message['stream'] = Stream.objects.select_related("realm").get(id=message['message'].recipient.type_id)
             if message['stream'].is_public():
-                event['realm_id'] = message['stream'].realm.id
+                event['realm_id'] = message['stream'].realm_id
                 event['stream_name'] = message['stream'].name
             if message['stream'].invite_only:
                 event['invite_only'] = True
@@ -975,7 +975,7 @@ def do_add_reaction(user_profile, message, emoji_name):
     # reactions to public stream messages to every browser for every
     # client in the organization, which doesn't scale.
     ums = UserMessage.objects.filter(message=message.id)
-    send_event(event, [um.user_profile.id for um in ums])
+    send_event(event, [um.user_profile_id for um in ums])
 
 def do_remove_reaction(user_profile, message, emoji_name):
     # type: (UserProfile, Message, Text) -> None
@@ -1003,7 +1003,7 @@ def do_remove_reaction(user_profile, message, emoji_name):
     # reactions to public stream messages to every browser for every
     # client in the organization, which doesn't scale.
     ums = UserMessage.objects.filter(message=message.id)
-    send_event(event, [um.user_profile.id for um in ums])
+    send_event(event, [um.user_profile_id for um in ums])
 
 def do_send_typing_notification(notification):
     # type: (Dict[str, Any]) -> None
@@ -2142,7 +2142,7 @@ def do_change_stream_description(realm, stream_name, new_description):
 def do_create_realm(string_id, name, restricted_to_domain=None,
                     invite_required=None, org_type=None):
     # type: (Text, Text, Optional[bool], Optional[bool], Optional[int]) -> Tuple[Realm, bool]
-    realm = get_realm_by_string_id(string_id)
+    realm = get_realm(string_id)
     created = not realm
     if created:
         kwargs = {} # type: Dict[str, Any]
@@ -2222,6 +2222,21 @@ def do_change_enable_desktop_notifications(user_profile, enable_desktop_notifica
     if log:
         log_event(event)
     send_event(event, [user_profile.id])
+
+def do_change_pm_content_in_desktop_notifications(user_profile,
+                                                  pm_content_in_desktop_notifications, log=True):
+    # type: (UserProfile, bool, bool) -> None
+    user_profile.pm_content_in_desktop_notifications \
+        = pm_content_in_desktop_notifications
+    user_profile.save(update_fields=["pm_content_in_desktop_notifications"])
+    event = {'type': 'update_global_notifications',
+             'user': user_profile.email,
+             'notification_name': 'pm_content_in_desktop_notifications',
+             'setting': pm_content_in_desktop_notifications}
+    if log:
+        log_event(event)
+    send_event(event, [user_profile.id])
+
 
 def do_change_enable_sounds(user_profile, enable_sounds, log=True):
     # type: (UserProfile, bool, bool) -> None
@@ -2781,7 +2796,7 @@ def do_update_message(user_profile, message, subject, propagate_mode, content, r
         message.subject = subject
         event["stream_id"] = message.recipient.type_id
         event["subject"] = subject
-        event['subject_links'] = bugdown.subject_links(message.sender.realm.domain.lower(), subject)
+        event['subject_links'] = bugdown.subject_links(message.sender.realm_id, subject)
         edit_history_event["prev_subject"] = orig_subject
 
         if propagate_mode in ["change_later", "change_all"]:
@@ -3076,11 +3091,14 @@ def fetch_initial_state_data(user_profile, event_types, queue_id):
     if want('realm_domain'):
         state['realm_domain'] = user_profile.realm.domain
 
+    if want('realm_domains'):
+        state['realm_domains'] = do_get_realm_aliases(user_profile.realm)
+
     if want('realm_emoji'):
         state['realm_emoji'] = user_profile.realm.get_emoji()
 
     if want('realm_filters'):
-        state['realm_filters'] = realm_filters_for_domain(user_profile.realm.domain)
+        state['realm_filters'] = realm_filters_for_realm(user_profile.realm_id)
 
     if want('realm_user'):
         state['realm_users'] = get_realm_user_dicts(user_profile)
@@ -3294,6 +3312,11 @@ def apply_events(state, events, user_profile):
         elif event['type'] == "update_message_flags":
             # The client will get the message with the updated flags directly
             pass
+        elif event['type'] == "realm_domains":
+            if event['op'] == 'add':
+                state['realm_domains'].append(event['alias'])
+            elif event['op'] == 'remove':
+                state['realm_domains'] = [alias for alias in state['realm_domains'] if alias['id'] != event['alias_id']]
         elif event['type'] == "realm_emoji":
             state['realm_emoji'] = event['realm_emoji']
         elif event['type'] == "alert_words":
@@ -3611,7 +3634,7 @@ def do_set_muted_topics(user_profile, muted_topics):
 
 def notify_realm_filters(realm):
     # type: (Realm) -> None
-    realm_filters = realm_filters_for_domain(realm.domain)
+    realm_filters = realm_filters_for_realm(realm.id)
     user_ids = [userdict['id'] for userdict in get_active_user_dicts_in_realm(realm)]
     event = dict(type="realm_filters", realm_filters=realm_filters)
     send_event(event, user_ids)
@@ -3646,9 +3669,27 @@ def get_emails_from_user_ids(user_ids):
     # We may eventually use memcached to speed this up, but the DB is fast.
     return UserProfile.emails_from_ids(user_ids)
 
-def realm_aliases(realm):
-    # type: (Realm) -> List[Text]
-    return [alias.domain for alias in realm.realmalias_set.all()]
+def do_get_realm_aliases(realm):
+    # type: (Realm) -> List[Dict[str, Text]]
+    return list(realm.realmalias_set.values('id', 'domain'))
+
+def do_add_realm_alias(realm, domain):
+    # type: (Realm, Text) -> (RealmAlias)
+    alias = RealmAlias(realm=realm, domain=domain)
+    alias.full_clean()
+    alias.save()
+    event = dict(type="realm_domains", op="add",
+                 alias=dict(id=alias.id,
+                            domain=alias.domain,
+                            ))
+    send_event(event, active_user_ids(realm))
+    return alias
+
+def do_remove_realm_alias(realm, alias_id):
+    # type: (Realm, int) -> None
+    RealmAlias.objects.get(pk=alias_id).delete()
+    event = dict(type="realm_domains", op="remove", alias_id=alias_id)
+    send_event(event, active_user_ids(realm))
 
 def get_occupied_streams(realm):
     # type: (Realm) -> QuerySet

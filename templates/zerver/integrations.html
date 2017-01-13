@@ -495,6 +495,45 @@
 
     </div>
 
+    <div id="delighted" class="integration-instructions">
+
+      <p>
+        Zulip supports integration with Delighted and can notify you
+        about updates in feedback responses organized by Delighted.
+      </p>
+
+      <p>
+        First, create the stream you'd like to use for Delighted notifications,
+        and subscribe all interested parties to this stream. We
+        recommend the name <code>delighted</code>. Next, create a bot named Delighted
+        and retrive the API key of the bot and place it into the API parameter in the URL below.
+      </p>
+
+      <p><code>{{ external_api_uri_subdomain }}/v1/external/delighted?api_key=abcdefgh&amp;stream=delighted</code></p>
+
+      <p>
+        Modify the parameters of the URL above, where <code>api_key</code> is the API key of your Zulip bot,
+        and <code>stream</code> is the stream name you want the
+        notifications sent to.
+      </p>
+
+      <p>
+        Go to your <a href="https://delighted.com/integrations/webhooks">Delighted Webhook Integration settings panel</a>.
+        Under <code>Send webhook notifications for:</code>: input the above URL with the modifications into
+        the URL textbox and press <code>Save and turn on</code> to finish.
+      </p>
+
+        <img class="screenshot" src="/static/images/integrations/delighted/000.png" />
+
+      <p>
+        <b>Congratulations! You're done!</b><br /> When an issue occurs,
+        you'll get a notification like this:
+      </p>
+
+      <img class="screenshot" src="/static/images/integrations/delighted/001.png" />
+
+    </div>
+
     <div id="deskdotcom" class="integration-instructions">
 
 
@@ -813,7 +852,6 @@
       <img class="screenshot" src="/static/images/integrations/freshdesk/010.png" />
     </div>
 
-
     <div id="git" class="integration-instructions">
 
       <p>First, download and install our <a href="/api">Python
@@ -1006,6 +1044,132 @@
       </p>
 
       <p><img class="screenshot" src="/static/images/integrations/gosquared/000.png" /></p>
+
+    </div>
+
+    <div id="google-calendar" class="integration-instructions">
+
+        <p>
+        Get Google Calendar reminders in Zulip! This is a great way to see your reminders directly in
+        your Zulip feed.
+        </p>
+
+        <p>
+        First download and install our <a href="/api">Python Bindings and example scripts</a>.
+        This bot should be set up on a trusted machine, because your API key is visible to local users
+        through the command line or config file.
+        </p>
+
+        <p>
+        Next, follow the instructions for <b>Step 1</b> at <a href="https://developers.google.com/
+        google-apps/calendar/quickstart/python">this link</a> to get a <code>client_secret</code>
+        file. Save this file to your <code>/~</code> directory instead of your working directory.
+        </p>
+
+        <p>
+        Next, install the latest Google API Client for Python by following the instructions on
+        the <a href="https://developers.google.com/api-client-library/python/start/installation">
+        Google Website</a>.
+        </p>
+
+        <p>
+        Then go to your <b>Zulip Settings</b> by clicking on the cog in the top right corner,
+        and then clicking on <b>Settings</b>.
+        </p>
+
+        <p>
+        Click on the tab that's labeled <b>Your Bots</b> and click on <b>Show/change your API
+        key</b>. Enter your password if prompted, and download the <code>.zuliprc</code> file. Save
+        this file to your <code>~/</code> folder.
+        </p>
+
+        <p><img class="screenshot" src="/static/images/integrations/google/calendar/001.png" /></p>
+
+        <p>
+        Run the <code>get-google-credentials</code> with this command:
+        <pre>python /usr/local/share/zulip/integrations/google/get-google-credentials</pre>
+        It should open up a browser and ask you for certain permissions. Give Zulip access, and move
+        on to the next step. If it doesn't open a browser, follow the instructions in the terminal
+        window.
+        </p>
+
+        <p>
+        Now, all that's left to do is to run the <code>gcal-bot</code> script, in the same
+        directory as the <code>get-google-credentials</code> script, with the necessary paramaters:
+            <pre>python /usr/local/share/zulip/integrations/google/gcal-bot --user foo@zulip.com</pre>
+        </p>
+
+        <p>
+        The <code>--user</code> flag specifies the user to send the reminder to. <br />There are
+        two optional flags that you can specify when running this script:
+        </p>
+        <ol>
+            <li>
+            <code>--calendar</code>: This flag specifies the calendar to watch from the user's
+            Google Account. By default, this flag is set to a user's primary or default calendar.
+            To specify a calendar, you need the calendar ID which can be obtained by going to Google
+            Calendar and clicking on the wedge next to the calendar's name. Click on settings in
+            <b>Calendar settings</b> in the drop down, and look for the <b>Calendar Address</b>
+            section. Copy the <b>Calendar ID</b> from the right side of the page and use that as the
+            value for this flag.
+
+            <p><img class="screenshot" src="/static/images/integrations/google/calendar/002.png"/></p>
+            </li>
+
+            <li>
+            <code>--interval</code>: This flag specifies the interval of time - in minutes - between
+            receiving the reminder, and the actual event. For example, an interval of 30 minutes
+            would mean that you would receive a reminder for an event 30 minutes before it is
+            scheduled to occur.
+            </li>
+        </ol>
+
+        <p>
+        Don't close the terminal window with the bot running. You will only get reminders if the
+        bot is still running.</p>
+
+        <p>
+        <b>Congratulations! You're done!</b><br />You will get a Zulip private message, whenever you
+        have a calendar event scheduled, that looks like this:
+        <img class="screenshot" src="/static/images/integrations/google/calendar/003.png" />
+        </p>
+
+    </div>
+
+    <div id="hellosign" class="integration-instructions">
+
+      <p>
+        Configuring the HelloSign integration is easy. First, create a stream
+        (we recommend a name like "hellosign").
+      </p>
+
+      <p>
+        Next, go to the Zulip settings page and create a Zulip bot bot
+        for the HelloSign integration.  Note the bot API key and add
+        it to the URL below as <code>api_key</code>, and including the
+        name of the stream you'd like to receive the notifications
+        as <code>stream=</code> in the URL.  If you'd like to hardcode
+        the topic used by the bot, simply append
+        <code>&amp;topic=topic_name</code> to the end of the above URL, where
+        <code>topic_name</code> is your topic.
+      </p>
+
+      <p><code>{{ external_api_uri_subdomain }}/v1/external/hellosign?api_key=abcdefgh&amp;stream=stream_name</code></p>
+
+      <p>
+        Go to the account settings page of your HelloSign account and
+        under the Integrations tab, go to API and Account Callback.
+        Add the above URL with your modifications under the section 'Account Callback'.
+      </p>
+
+      <p><img class="screenshot" src="/static/images/integrations/hellosign/000.png" /></p>
+
+      <p>
+        <b>Congratulations! You're all set.</b><br />
+        Your messages should look like this:
+      </p>
+
+      <p><img class="screenshot" src="/static/images/integrations/hellosign/001.png" /></p>
 
     </div>
 
@@ -1637,6 +1801,55 @@ key = NAGIOS_BOT_API_KEY
 
     </div>
 
+    <div id="papertrail" class="integration-instructions">
+
+      <p>
+        Zulip supports integration with Papertrail as a
+        <a href="http://www.perforce.com/perforce/doc.current/manuals/p4sag/chapter.scripting.html">Webhook</a>
+        that fires upon finding a certain log. To do this:
+      </p>
+
+      <p>
+        First, create the stream you'd like to use for Papertrail
+        notifications, and subscribe all interested parties to this stream. We
+        recommend the stream name be <code>papertrail</code>. After create a bot named
+        <code>Papertrail</code> and note the API key.
+      </p>
+
+      <p>
+        Next, log into your Papertrail Account and browse through your logs.
+        Search for logs you want to get alerts for and press the <code>Save Search</code>
+        to open up a modal window, then fill out the details and press the
+        <code>Save & Setup an alert button</code>.
+      </p>
+
+      <img class="screenshot" src="/static/images/integrations/papertrail/000.png" />
+
+      <img class="screenshot" src="/static/images/integrations/papertrail/001.png" />
+
+      <p>
+        Go to the <code>Create an alert</code> section, press the <code>Webhooks</code>
+        link and place the below URL into the <code>Webhook URL</code> section. Be sure to set
+        the frequency to either minute, hour or day.
+      </p>
+
+      <p><code>{{ external_api_uri_subdomain }}/v1/external/papertrail?api_key=abcdefgh&amp;stream=papertrail</code></p>
+
+      <img class="screenshot" src="/static/images/integrations/papertrail/002.png" />
+
+      <p>
+        Note: <code>api_key</code> is the API key of your Zulip bot,
+        and <code>stream</code> is the stream name you want the
+        notifications sent to.
+      </p>
+
+      <p>
+        <b>Congratulations! You're done!</b><br /> Your Papertrail notifications will
+        appear in Zulip:
+      </p>
+      <img class="screenshot" src="/static/images/integrations/papertrail/003.png" />
+
+    </div>
 
     <div id="perforce" class="integration-instructions">
 
@@ -1954,6 +2167,41 @@ key = NAGIOS_BOT_API_KEY
       <img class="screenshot" src="/static/images/integrations/sentry/005.png" />
     </div>
 
+    <div id="solano" class="integration-instructions">
+
+        <p>
+        First, create the stream you'd like to use for Solano Labs CI Build notifications, and
+        subscribe all interested parties to this stream. The integration will use the default
+        stream <code>solano labs</code> if no stream is supplied in the hook; you still need
+        to create the stream even if you are using this default.
+        </p>
+
+        <p>
+        Next, setup a bot that you would like to use with this integration. You will need its
+        API key.
+        </p>
+
+        <p>
+        Next, follow <a href="http://docs.solanolabs.com/Setup/webhooks/#build-notification-web-hooks-outgoing">
+        these instructions</a> for Outgoing Web Hooks to configure a webhook for your Solano
+        Labs Organization and choose the repositories that should trigger a webhook a notification.
+        </p>
+
+        <p>Enter a url of the following format into the URL field:</p>
+
+        <p><code>{{ external_api_uri_subdomain }}/v1/external/solano?api_key=abcdefgh&stream=solano_labs</code></p>
+
+        <p>Where <code>abcdefgh</code> should be replaced with the API key of the bot you
+        created earlier.</p>
+
+        <p>Leave the <b>Username</b> and <b>Password</b> fields blank and click <b>Add Web Hook</b></p>
+        <p><b>Congratulations! You're Done!</b></p>
+
+        <p>Your messages will look like this:</p>
+
+        <img class="screenshot" src="/static/images/integrations/solano/001.png" />
+
+    </div>
 
     <div id="stash" class="integration-instructions">
       <h4>Stash</h4>
@@ -2057,7 +2305,7 @@ key = NAGIOS_BOT_API_KEY
       </p>
 
       <p>
-        You will now recieve notifications for the events you have chosen.
+        You will now receive notifications for the events you have chosen.
         Zulip currently supports the following events:
       </p>
 
